@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import glob
+import os
 
 criteria = (cv2.TermCriteria_EPS + cv2.TermCriteria_MAX_ITER, 30, 0.001)
 
@@ -52,7 +53,7 @@ objp *= square_size
 objpoints = []
 imgpoints = []
 
-images = glob.glob(r'C:\Users\DELL\Desktop\Sigma tổng\Robot\calib_images\*.jpg')
+images = glob.glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'calib_images', '*.png'))
 
 if len(images) == 0:
     print("No images found")
