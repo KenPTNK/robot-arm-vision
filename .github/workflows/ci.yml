@@ -1,0 +1,36 @@
+name: ci
+on: [push, pull_request]
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # CPU-only torch keeps the install small
+      - run: pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install -r requirements.txt
+      - run: python -m compileall -q .
+      - name: Detector loads and finds objects in the sample image
+        run: |
+          python - <<'PY'
+          from ultralytics import YOLO
+          model = YOLO("best.pt")
+          assert list(model.names.values()) == ["Chai", "Circle", "Square", "Triangle"], model.names
+          boxes = model.predict("image.jpg", verbose=False)[0].boxes
+          assert len(boxes) > 0, "no detections on image.jpg"
+          print(f"{len(boxes)} objects detected")
+          PY
+
+  arduino:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: arduino/compile-sketches@v1
+        with:
+          fqbn: arduino:avr:uno
+          sketch-paths: |
+            - Final/RobotAIcontrol_New_new
+            - Code_3DOF_Robot_Control
