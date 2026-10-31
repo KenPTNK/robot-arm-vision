@@ -1,6 +1,6 @@
 #include <math.h>
 
-//Thiết lập phần cứng
+//Hardware setup
 int32_t pulseSupply[] = {0, 0, 0};
 double PeriodOfPulse = 1000;
 uint16_t moveDelay = 1000;       // pulse delay (μs) — increase for slower motion
@@ -11,8 +11,8 @@ uint8_t pulsePin[] = { 9, 11, 13 };
 uint8_t psetdir[] = { 0, 0, 1 }; 
 uint8_t hsetdir[] = { 1, 1, 0 };
 
-// ===== Nam châm điện =====
-const uint8_t MAG_PIN = 2;   // dùng D2
+// ===== Electromagnet =====
+const uint8_t MAG_PIN = 2;   // uses D2
 
 int32_t pulseHome[] = { 300, 900, -300 };
 
@@ -45,7 +45,7 @@ void run_stepper(double angle_input[]);
 void run_synchronous_stepper(double angle_input[]);
 void generate_pulse(uint8_t NoJoint, int32_t pulseNumber, uint16_t timeDelay);
 
-// Hàm pick-and-place dùng nam châm
+// Pick-and-place using the magnet
 void pick_and_place(double pick_pos[3]);
 
 void setup() { 
@@ -68,7 +68,7 @@ void setup() {
 
 void loop() {
 
-  // ===== LUÔN đọc Serial =====
+  // ===== ALWAYS read Serial =====
   while (Serial.available() > 0) {
     char inChar = (char)Serial.read();
     inputString += inChar;
@@ -79,14 +79,14 @@ void loop() {
     }
   }
 
-  // ===== XỬ LÝ LỆNH =====
+  // ===== HANDLE COMMAND =====
   if (stringCompleted) {
     stringCompleted = false;
     inputString.trim();
 
     char cmd = inputString.charAt(0);
 
-    // ===== LỆNH I =====
+    // ===== COMMAND I =====
     if (cmd == 'I') {
       if (!isBusy) {
         splitDataKinematic(inputString);
@@ -102,7 +102,7 @@ void loop() {
       }
     }
 
-    // ===== LỆNH F =====
+    // ===== COMMAND F =====
     else if (cmd == 'F') {
       if (!isBusy) {
         splitDataKinematic(inputString);
@@ -116,11 +116,11 @@ void loop() {
       }
     }
 
-    // ===== LỆNH H (ƯU TIÊN CAO) =====
+    // ===== COMMAND H (HIGH PRIORITY) =====
     else if (cmd == 'H') {
       Serial.println("[CMD] HOME");
 
-      // nếu đang bận thì vẫn cho home chạy
+      // homing is still allowed while busy
       isBusy = true;
 
       for (uint8_t i = 0; i < 3; i++) {
@@ -210,7 +210,7 @@ bool inverse_kinematics1(double pos_input[]) {
 
 /* Sethome */
 void Sethome(uint8_t NoJoint,int32_t pulse, uint16_t timeDelay) {
-  //Set hướng xoay là 0 và xoay động cơ liên tục cho đến khi công tắc hành trình thay đổi trạng thái
+  //Set rotation direction to 0 and keep rotating until the limit switch changes state
   digitalWrite(dirPin[NoJoint], psetdir[NoJoint]);
   while (flagHome == false) {
     digitalWrite(pulsePin[NoJoint], 1);
@@ -230,7 +230,7 @@ void Sethome(uint8_t NoJoint,int32_t pulse, uint16_t timeDelay) {
     }
     delayMicroseconds(timeDelay);
     if (digitalRead(lmPin[NoJoint]) == 0) {
-      delay(5);  //chờ 200ms sau đó kiểm tra lại trạng thái của limit switch = chống dội
+      delay(5);  //wait, then re-check the limit switch (debounce)
       if (digitalRead(lmPin[NoJoint]) == 0) {
         delay(1000);
         flagHome = true;
@@ -239,7 +239,7 @@ void Sethome(uint8_t NoJoint,int32_t pulse, uint16_t timeDelay) {
     }
   }
 
-  //set hướng ngược lại và phát xung theo giá trị xung được setup bên trên
+  //set the opposite direction and send the pulses configured above
   digitalWrite(dirPin[NoJoint], hsetdir[NoJoint]);
   for (uint32_t p = 0; p < abs(pulse); p++) {
     digitalWrite(pulsePin[NoJoint], 1);
@@ -346,45 +346,45 @@ void generate_pulse(uint8_t NoJoint, int32_t pulseNumber, uint16_t timeDelay) {
 void pick_and_place(double pick_pos[3]) {
   Serial.println("[TASK] Pick & Place start");
 
-  // 1) Tiếp cận từ trên (Z + 4mm) — tốc độ bình thường
+  // 1) Approach from above (Z + 4mm) at normal speed
   double approach[3] = { pick_pos[0], pick_pos[1], pick_pos[2] + 4.0 };
   inverse_kinematics1(approach);
   moveDelay = 1000;
   run_synchronous_stepper(angleSP);
   delay(200);
 
-  // 2) Hạ chậm xuống vật (Z = 0)
+  // 2) Descend slowly onto the object (Z = 0)
   inverse_kinematics1(pick_pos);
   moveDelay = SLOW_DELAY;
   run_synchronous_stepper(angleSP);
   moveDelay = 1000;
   delay(200);
 
-  // 3) Bật nam châm → hút vật
+  // 3) Turn magnet on -> pick up the object
   digitalWrite(MAG_PIN, HIGH);
   delay(400);
 
-  // 4) Nâng vật lên
+  // 4) Lift the object
   inverse_kinematics1(approach);
   run_synchronous_stepper(angleSP);
   delay(200);
 
-  // 5) Di chuyển đến vị trí thả
+  // 5) Move to the drop position
   double place_up[3] = { dropPos[0], dropPos[1], dropPos[2] + 40.0};
   inverse_kinematics1(place_up);
   run_synchronous_stepper(angleSP);
   delay(200);
 
-  // 6) Hạ xuống để thả
+  // 6) Lower to release
   inverse_kinematics1(dropPos);
   run_synchronous_stepper(angleSP);
   delay(200);
 
-  // 7) Tắt nam châm nhả vật
+  // 7) Turn magnet off to release the object
   digitalWrite(MAG_PIN, LOW);
   delay(400);
 
-  // 8) Nâng lên lại
+  // 8) Lift back up
   inverse_kinematics1(place_up);
   run_synchronous_stepper(angleSP);
   delay(200);

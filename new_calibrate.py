@@ -68,17 +68,17 @@ print("Distortion coefficients:\n", dist.ravel())
 
 # Save results
 with open("camera_calibration.txt", "w", encoding="utf-8") as f:
-    f.write("Kết quả hiệu chỉnh:\n")
-    f.write("Ma trận nội (Intrinsic matrix):\n")
+    f.write("Calibration results:\n")
+    f.write("Intrinsic matrix:\n")
     f.write(str(mtx) + "\n\n")
-    f.write("Hệ số méo (Distortion coefficients):\n")
+    f.write("Distortion coefficients:\n")
     f.write(str(dist.ravel()) + "\n\n")
 
     for i, (rvec, tvec) in enumerate(zip(rvecs, tvecs)):
         R, _ = cv2.Rodrigues(rvec)
         extrinsic = np.hstack((R, tvec))
 
-        f.write(f"Ảnh {i+1}:\n")
+        f.write(f"Image {i+1}:\n")
         f.write("R:\n" + str(R) + "\n")
         f.write("t:\n" + str(tvec) + "\n")
         f.write("[R|t]:\n" + str(extrinsic) + "\n\n")

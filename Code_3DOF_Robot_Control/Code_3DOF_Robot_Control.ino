@@ -1,32 +1,32 @@
-//Thiết lập phần cứng
+//Hardware setup
 #include <math.h>
 int32_t pulseSupply[] = {0, 0, 0};
 double PeriodOfPulse = 1000;
-uint8_t lmPin[] = { 15, 17, 19 };    //Chân công tắc hành trình
-uint8_t dirPin[] = { 8, 10, 12 };    //Chân điều khiển hướng động cơ 1,2,3
-uint8_t pulsePin[] = { 9, 11, 13 };  //Chân phát xung điều khiển động cơ 1,2,3
-uint8_t psetdir[] = { 0, 0, 1 }; // Biến định nghĩa chiều quay của động cơ khi quay về vị trí cảm biến home
-uint8_t hsetdir[] = { 1, 1, 0 }; // Biến định nghĩa chiều quay của động cơ khi chạm cảm biến và quay về vị trí home 
-//Khai báo biến
-int32_t pulseHome[] = { 300, 900, 300 };  //Khai báo số xung cần phát để robot xoay đến tư thế mong muốn
+uint8_t lmPin[] = { 15, 17, 19 };    //Limit switch pins
+uint8_t dirPin[] = { 8, 10, 12 };    //Direction pins for motors 1,2,3
+uint8_t pulsePin[] = { 9, 11, 13 };  //Pulse pins for motors 1,2,3
+uint8_t psetdir[] = { 0, 0, 1 }; // Motor direction when moving toward the home sensor
+uint8_t hsetdir[] = { 1, 1, 0 }; // Motor direction after touching the sensor, when returning to home
+//Variable declarations
+int32_t pulseHome[] = { 300, 900, 300 };  //Number of pulses needed to rotate the robot to the desired pose
 
 bool flagHome = false;
-double angleSP[] = { 0, 0, 0 };  // khai báo biến chứa vị trí góc của khớp
+double angleSP[] = { 0, 0, 0 };  // joint angle setpoints
 int32_t pulseSP[] = { 0, 0, 0 };
-double positionSP[] = { 0, 0, 0 };  //khai báo biến chứa vị trí của robot
+double positionSP[] = { 0, 0, 0 };  //robot position
 
-double angleNow[] = { 0, 0, 0 };  // khai báo biến chưa vị trí góc của khớp
+double angleNow[] = { 0, 0, 0 };  // current joint angles
 int32_t pulseNow[] = { 0, 0, 0 };
-double positionNow[] = { 0, 0, 0 };  //khai báo biến chứa vị trí của robot
+double positionNow[] = { 0, 0, 0 };  //robot position
 double homeAngle[] = {0, 90, -90};
-bool stringCompleted = false;  //khai báo cờ nhận biết khi nào thì kết thúc nhận chuỗi dữ liệu UART
-const double L1 = 140, L2 = 140, L3 = 140, L4 = 54, L5 = 0.8; // Thông số vật lý của robot được trích xuất từ Solidworks
-String inputString;  //chuỗi chứa dữ liệu được nhập từ bàn phím
+bool stringCompleted = false;  //flag set when a complete UART string has been received
+const double L1 = 140, L2 = 140, L3 = 140, L4 = 54, L5 = 0.8; // Robot link dimensions taken from SolidWorks
+String inputString;  //string holding the received command
 
 void setup() {
-  Serial.begin(115200);      //thiết lập giao thức UART
-  inputString.reserve(200);  //khai báo vùng đệm chứa dữ liệu UART là 200 bytes
-  //Thiết lập các chân input, output và trạng thái ban đầu của các chân output
+  Serial.begin(115200);      //set up UART
+  inputString.reserve(200);  //reserve a 200-byte buffer for UART data
+  //Configure input/output pins and the initial state of the outputs
   for (uint8_t i = 0; i < 3; i++) {
     pinMode(lmPin[i], INPUT_PULLUP);
     pinMode(dirPin[i], OUTPUT);
@@ -38,22 +38,22 @@ void setup() {
 }
 
 void loop() {
-  //Kiểm tra khi nào trong vùng nhớ đệm UART có dữ liệu thì đọc, và đọc đến kí tự kết thúc ")"
+  //Read from the UART buffer whenever data is available, until the terminating ")"
   while (Serial.available() > 0) {
-    char inChar = (char)Serial.read();  // Đọc byte nhập vào và lưu trong "inChar"
-    inputString += inChar;              // Cộng dồn byte inChar vào chuỗi "inputString"
-    if (inChar == ')')                  // Nếu như gặp kí từ kết thúc là "z"
+    char inChar = (char)Serial.read();  // Read the incoming byte into "inChar"
+    inputString += inChar;              // Append inChar to "inputString"
+    if (inChar == ')')                  // If the terminating character is found
     {
       Serial.print(inputString);
       Serial.print(" ");
-      stringCompleted = true;  // Thì set flag UART = true và dừng việc cộng dồn "inChar" và chuỗi "inputString"
+      stringCompleted = true;  // set the UART flag to true and stop appending to "inputString"
       break;
     }
-    //bắt đầu xử lý chuỗi dữ liệu nhận được
+    //start processing the received string
     if (stringCompleted == true) {
       stringCompleted = false;
-      splitDataKinematic(inputString);  // bóc tách  chuỗi dữ liệu bằng hàm
-      if (inputString[0] == 'H') {      //nếu kí tự bắt đầu là H thì câu lệnh đó set home
+      splitDataKinematic(inputString);  // parse the string with this function
+      if (inputString[0] == 'H') {      //a leading H means: go home
         Serial.println("Set home");
         for (uint8_t i = 0; i < 3; i++) {
           Sethome(i, pulseHome[i], 2000);
@@ -62,7 +62,7 @@ void loop() {
         }
         
       } else {
-        if (inputString[0] == 'F') {  //nếu kí tự bắt đầu là F thì câu lệnh đó chạy động học thuận
+        if (inputString[0] == 'F') {  //a leading F means: run forward kinematics
           forward_kinematics(angleSP);
           Serial.print("Angle FK: ");
           for (uint8_t j = 0; j < 3; j++) {
@@ -81,7 +81,7 @@ void loop() {
           run_synchronous_stepper(angleSP);
 
         } else {
-          if (inputString[0] == 'I') {  //nếu kí tự bắt đầu là I thì câu lệnh đó yêu cầu chạy động học nghịch
+          if (inputString[0] == 'I') {  //a leading I means: run inverse kinematics
             inverse_kinematics1(positionSP);
             Serial.print("Pos IK: ");
             for (uint8_t j = 0; j < 3; j++) {
@@ -101,7 +101,7 @@ void loop() {
 
           } else {
             Serial.print(inputString);
-            Serial.print(" is a ");  //còn không thuộc các trường hợp bên trên thì câu lệnh không đúng
+            Serial.print(" is a ");  //none of the cases above: invalid command
             Serial.println("Incorrect command!");
           }
         }
@@ -113,13 +113,13 @@ void loop() {
 }
 
 void splitDataKinematic(String inputString) {
-  //Xác định vị trí các kí tự ( và ) trong chuỗi
+  //Find the positions of ( and ) in the string
   uint8_t charStart = inputString.indexOf('(');
   uint8_t charEnd = inputString.indexOf(')');
-  //Tách 2 kí tự ( và ) ra và chuỗi data_raw chỉ còn lại các số và dấu cách
+  //Strip ( and ) so data_raw holds only numbers and spaces
   String data_raw = inputString.substring(charStart + 1, charEnd);
 
-  //Xác định vị trí của dấu cách trong chuỗi data_raw
+  //Find the positions of the spaces in data_raw
   uint8_t charSpace[] = { 0, 0 };
   uint8_t q = 0;
   for (uint8_t p = 0; p < data_raw.length(); p++) {
@@ -129,14 +129,14 @@ void splitDataKinematic(String inputString) {
     }
   }
 
-  //Nếu kí tự bắt đầu của chuỗi inputString thì bóc tách dữ liệu lưu vào positionSP
+  //For an I command, parse the data into positionSP
   if (inputString[0] == 'I') {
     positionSP[0] = (data_raw.substring(0, charSpace[0])).toDouble();
     positionSP[1] = (data_raw.substring(charSpace[0] + 1, charSpace[1])).toDouble();
     positionSP[2] = (data_raw.substring(charSpace[1] + 1, data_raw.length())).toDouble();
   }
 
-  //Nếu kí tự bắt đầu của chuỗi inputString thì bóc tách dữ liệu lưu vào angleSP
+  //For an F command, parse the data into angleSP
   if (inputString[0] == 'F') {
     angleSP[0] = (data_raw.substring(0, charSpace[0])).toDouble();
     angleSP[1] = (data_raw.substring(charSpace[0] + 1, charSpace[1])).toDouble();
@@ -161,41 +161,41 @@ bool inverse_kinematics1(double pos_input[]) {
   // ===== B1: q1 =====
   double theta1 = atan2(Py, Px);
 
-  // ===== B2: quy đổi tọa độ =====
+  // ===== Step 2: coordinate conversion =====
   double r = sqrt(Px*Px + Py*Py);
   double rw = r - (L4 + L5);   // offset ngang
-  double s  = Pz - L1;         // offset đứng
+  double s  = Pz - L1;         // vertical offset
 
-  // ===== B3: kiểm tra workspace =====
+  // ===== Step 3: workspace check =====
   double D = (rw*rw + s*s - L2*L2 - L3*L3) / (2*L2*L3);
 
   if (D < -1.0 || D > 1.0) {
-    return false; // ngoài workspace
+    return false; // outside the workspace
   }
   if (D > 1) D = 1;
   if (D < -1) D = -1;
   // ===== B4: q3 (elbow-down) =====
-  double s3 = -sqrt(1 - D*D);   // luôn âm → elbow-down
+  double s3 = -sqrt(1 - D*D);   // always negative -> elbow-down
   double c3 = D;
   double theta3 = atan2(s3, c3);
 
   // ===== B5: q2 =====
   double theta2 = atan2(s, rw) - atan2(L3*s3, L2 + L3*c3);
 
-  // ===== B6: đổi sang độ =====
+  // ===== Step 6: convert to degrees =====
   double q1 = theta1 * 180.0 / M_PI;
   double q2 = theta2 * 180.0 / M_PI;
   double q3 = theta3 * 180.0 / M_PI;
 
-  // ===== B7: offset theo cơ cấu robot =====
+  // ===== Step 7: offsets for the robot mechanism =====
   angleSP[0] = q1;
-  angleSP[1] = q2;   // tùy cơ cấu bạn
+  angleSP[1] = q2;   // depends on your mechanism
   angleSP[2] = q3;
 
   return true;
 }
 void Sethome(uint8_t NoJoint,int32_t pulse, uint16_t timeDelay) {
-  //Set hướng xoay là 0 và xoay động cơ liên tục cho đến khi công tắc hành trình thay đổi trạng thái
+  //Set rotation direction to 0 and keep rotating until the limit switch changes state
   digitalWrite(dirPin[NoJoint], psetdir[NoJoint]);
   while (flagHome == false) {
     digitalWrite(pulsePin[NoJoint], 1);
@@ -215,7 +215,7 @@ void Sethome(uint8_t NoJoint,int32_t pulse, uint16_t timeDelay) {
     }
     delayMicroseconds(timeDelay);
     if (digitalRead(lmPin[NoJoint]) == 0) {
-      delayMicroseconds(400);  //chờ 200ms sau đó kiểm tra lại trạng thái của limit switch = chống dội
+      delayMicroseconds(400);  //wait, then re-check the limit switch (debounce)
       if (digitalRead(lmPin[NoJoint]) == 0) {
         delay(1000);
         flagHome = true;
@@ -224,7 +224,7 @@ void Sethome(uint8_t NoJoint,int32_t pulse, uint16_t timeDelay) {
     }
   }
 
-  //set hướng ngược lại và phát xung theo giá trị xung được setup bên trên
+  //set the opposite direction and send the pulses configured above
   digitalWrite(dirPin[NoJoint], hsetdir[NoJoint]);
   for (uint32_t p = 0; p < abs(pulse); p++) {
     digitalWrite(pulsePin[NoJoint], 1);

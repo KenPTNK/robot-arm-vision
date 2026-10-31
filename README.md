@@ -1,81 +1,81 @@
 # Robot Arm Vision
 
-Cánh tay robot 3 bậc tự do (3DOF) gắp – thả vật thể bằng camera. Camera chụp khu vực làm việc, mô hình YOLO nhận diện vật, Python đổi tọa độ ảnh sang tọa độ robot rồi gửi lệnh qua Serial cho Arduino điều khiển 3 động cơ bước.
+A 3-DOF robot arm that picks and places objects using a camera. The camera looks at the workspace, a YOLO model detects the object, Python converts image coordinates to robot coordinates and sends a command over Serial to an Arduino, which drives three stepper motors.
 
 ```
-Camera ──► YOLO (best.pt) ──► pixel (u, v) ──► tọa độ thế giới ──► tọa độ robot ──► Serial ──► Arduino ──► động cơ bước
+Camera ──► YOLO (best.pt) ──► pixel (u, v) ──► world coords ──► robot coords ──► Serial ──► Arduino ──► steppers
 ```
 
-## Cấu trúc thư mục
+## Repository layout
 
-| Đường dẫn | Nội dung |
+| Path | Description |
 |---|---|
-| `Final/Cam_detect_fixed.py` | Chương trình chính: nhận diện, chuyển tọa độ, gửi lệnh cho Arduino |
-| `Final/RobotAIcontrol_New_new/` | Sketch Arduino mới nhất: nhận lệnh, động học, gắp – thả |
-| `Code_3DOF_Robot_Control/` | Sketch Arduino điều khiển 3DOF cơ bản |
-| `calibrate.py`, `new_calibrate.py` | Hiệu chỉnh camera bằng bàn cờ |
-| `calib_images/`, `calib_images3/` | Ảnh bàn cờ dùng để hiệu chỉnh |
-| `camera_calibration.txt` | Kết quả hiệu chỉnh (ma trận K, hệ số méo) |
-| `b1.py`, `robot_dataset.py`, `yolo_dataset.py` | Chụp ảnh từ webcam để làm dataset |
-| `merge_img.py` | Gộp các thư mục ảnh dataset |
-| `roboflow.py` | Upload ảnh lên Roboflow |
-| `Cam_detect.py`, `result.py` | Script thử nghiệm nhận diện |
-| `best.pt` | Trọng số YOLO đã huấn luyện |
-| `CAD_3DRobot_Arm/` | Bản vẽ SolidWorks (chi tiết + `Assem1.SLDASM`) |
+| `Final/Cam_detect_fixed.py` | Main program: detection, coordinate transforms, sends commands to the Arduino |
+| `Final/RobotAIcontrol_New_new/` | Latest Arduino sketch: command parsing, kinematics, pick-and-place |
+| `Code_3DOF_Robot_Control/` | Basic 3-DOF Arduino control sketch |
+| `calibrate.py`, `new_calibrate.py` | Camera calibration with a chessboard |
+| `calib_images/`, `calib_images3/` | Chessboard images used for calibration |
+| `camera_calibration.txt` | Calibration output (K matrix, distortion coefficients) |
+| `b1.py`, `robot_dataset.py`, `yolo_dataset.py` | Capture webcam images for the dataset |
+| `merge_img.py` | Merge dataset image folders |
+| `roboflow.py` | Upload images to Roboflow |
+| `Cam_detect.py`, `result.py` | Detection test scripts |
+| `best.pt` | Trained YOLO weights |
+| `CAD_3DRobot_Arm/` | SolidWorks parts and assembly (`Assem1.SLDASM`) |
 
-## Cài đặt
+## Setup
 
-Cần Python 3.11 và Arduino IDE.
+Requires Python 3.11 and the Arduino IDE.
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Nạp `Final/RobotAIcontrol_New_new/RobotAIcontrol_New_new.ino` vào Arduino (baud 115200).
+Upload `Final/RobotAIcontrol_New_new/RobotAIcontrol_New_new.ino` to the Arduino (baud rate 115200).
 
-## Chạy
+## Run
 
 ```bash
 cd Final
 python Cam_detect_fixed.py
 ```
 
-Mặc định script mở camera số `1` và cổng `COM7`; sửa trong code nếu máy bạn khác.
+By default the script opens camera `1` and port `COM7`; change them in the code if your setup differs.
 
-| Phím | Tác dụng |
+| Key | Action |
 |---|---|
-| `q` | Bật chế độ tự động gắp |
-| `h` | Đưa robot về vị trí home |
-| `e` | Bật/tắt chế độ hiệu chỉnh |
-| `Esc` | Thoát |
+| `q` | Start automatic pick-and-place |
+| `h` | Send the robot home |
+| `e` | Toggle calibration mode |
+| `Esc` | Quit |
 
-### Giao thức Serial
+### Serial protocol
 
-| Lệnh | Ý nghĩa |
+| Command | Meaning |
 |---|---|
-| `I(x y z)` | Gắp vật tại tọa độ robot `(x, y, z)` (mm) |
-| `H()` | Về home |
+| `I(x y z)` | Pick the object at robot coordinates `(x, y, z)` in mm |
+| `H()` | Go home |
 
-Arduino trả về `Done` khi làm xong.
+The Arduino replies `Done` when the move is finished.
 
-## Hiệu chỉnh camera
+## Camera calibration
 
 ```bash
-python calibrate.py        # ảnh trong calib_images/
-python new_calibrate.py    # ảnh trong calib_images3/
+python calibrate.py        # uses images in calib_images/
+python new_calibrate.py    # uses images in calib_images3/
 ```
 
-Chép ma trận `K` và hệ số méo `dist` in ra vào phần `CAMERA PARAMS` của `Final/Cam_detect_fixed.py`.
+Copy the printed `K` matrix and distortion coefficients `dist` into the `CAMERA PARAMS` section of `Final/Cam_detect_fixed.py`.
 
 ## Roboflow
 
-`roboflow.py` đọc API key từ biến môi trường, không ghi trong code:
+`roboflow.py` reads the API key from an environment variable, never from the code:
 
 ```bash
 export ROBOFLOW_API_KEY=...        # PowerShell: $env:ROBOFLOW_API_KEY="..."
 python roboflow.py
 ```
 
-## Không có trong repo
+## Not in this repository
 
-Dataset (`*.zip`, `funda_images/`, `hardcore_images/`) và các trọng số cũ (`last.pt`, `old_remove_best.pt`) quá nặng nên không đưa lên. `result.py` cần `old_remove_best.pt`; đổi sang `best.pt` nếu không có file đó.
+Datasets (`*.zip`, `funda_images/`, `hardcore_images/`) and older weights (`last.pt`, `old_remove_best.pt`) are too large to include. `result.py` expects `old_remove_best.pt`; switch it to `best.pt` if you do not have that file.
