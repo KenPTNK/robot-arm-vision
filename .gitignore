@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node
+node_modules/
+
+# Editor / tool folders
+.sixth/
+.vscode/
+
+# Secrets
+.env
+
+# Large datasets (keep locally, not in git)
+*.zip
+funda_images/
+hardcore_images/
+
+# Old / intermediate model weights (best.pt is kept)
+last.pt
+old_remove_best.pt
+
+# Training output images
+results*.png
+
+# Unrelated to this project (n8n workflow with private sheet links)
+My workflow.json
