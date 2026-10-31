@@ -9,34 +9,34 @@ Camera ──► YOLO (best.pt) ──► pixel (u, v) ──► world coords �
 ## How it works
 
 **1. Pixel to table point** (`image_to_world` in `Final/Cam_detect_fixed.py`). The pixel is undistorted
-with the calibrated intrinsics $K$ and distortion coefficients, giving a normalised ray $\mathbf{d}_c$.
-With the camera pose $(R, \mathbf{t})$ from calibration, the camera centre in world coordinates is
-$\mathbf{C} = -R^\top\mathbf{t}$ and the ray direction is $\mathbf{d} = R^\top\mathbf{d}_c$. The object lies
-on the table plane $z = 0$, so
+with the calibrated intrinsics $`K`$ and distortion coefficients, giving a normalised ray $`\mathbf{d}_c`$.
+With the camera pose $`(R, \mathbf{t})`$ from calibration, the camera centre in world coordinates is
+$`\mathbf{C} = -R^\top\mathbf{t}`$ and the ray direction is $`\mathbf{d} = R^\top\mathbf{d}_c`$. The object lies
+on the table plane $`z = 0`$, so
 
 $$
 \mathbf{P}_w = \mathbf{C} + s\,\mathbf{d},\qquad s = -\frac{C_z}{d_z}.
 $$
 
 **2. World to robot frame** (`world_to_robot`). A fixed rigid transform:
-$\mathbf{P}_r = R_{wr}^\top(\mathbf{P}_w - \mathbf{t}_{wr})$, with $R_{wr} = R_z(45^\circ)\,R_y(180^\circ)$.
+$`\mathbf{P}_r = R_{wr}^\top(\mathbf{P}_w - \mathbf{t}_{wr})`$, with $`R_{wr} = R_z(45^\circ)\,R_y(180^\circ)`$.
 
 **3. Correcting the arm's error** (`apply_calibration`). Measured pairs of commanded and reached
-positions are fitted with a 2-D affine model $\mathbf{p}_{\text{real}} = M\,\mathbf{p}_{\text{cmd}} + \mathbf{b}$
-by least squares. To reach a target $T$, the script sends $M^{-1}(T - \mathbf{b})$.
+positions are fitted with a 2-D affine model $`\mathbf{p}_{\text{real}} = M\,\mathbf{p}_{\text{cmd}} + \mathbf{b}`$
+by least squares. To reach a target $`T`$, the script sends $`M^{-1}(T - \mathbf{b})`$.
 
 **4. Inverse kinematics on the Arduino** (`inverse_kinematics1` in
-`Final/RobotAIcontrol_New_new/RobotAIcontrol_New_new.ino`). Base angle $\theta_1 = \operatorname{atan2}(P_y, P_x)$;
-the shoulder and elbow form a two-link planar arm ($L_2 = L_3 = 140$ mm) solved with the law of cosines:
+`Final/RobotAIcontrol_New_new/RobotAIcontrol_New_new.ino`). Base angle $`\theta_1 = \mathrm{atan2}(P_y, P_x)`$;
+the shoulder and elbow form a two-link planar arm ($`L_2 = L_3 = 140`$ mm) solved with the law of cosines:
 
 $$
 D = \frac{r_w^2 + s^2 - L_2^2 - L_3^2}{2L_2L_3},\quad
-\theta_3 = \operatorname{atan2}\!\left(-\sqrt{1-D^2},\, D\right),\quad
-\theta_2 = \operatorname{atan2}(s, r_w) - \operatorname{atan2}(L_3\sin\theta_3,\ L_2 + L_3\cos\theta_3),
+\theta_3 = \mathrm{atan2}\!\left(-\sqrt{1-D^2},\, D\right),\quad
+\theta_2 = \mathrm{atan2}(s, r_w) - \mathrm{atan2}(L_3\sin\theta_3,\ L_2 + L_3\cos\theta_3),
 $$
 
-where $r_w$ is the horizontal reach minus the 54 mm end-effector offset and $s = P_z - L_1$.
-Targets with $|D| > 1$ are out of reach and rejected. The angles are converted to step pulses
+where $`r_w`$ is the horizontal reach minus the 54 mm end-effector offset and $`s = P_z - L_1`$.
+Targets with $`|D| > 1`$ are out of reach and rejected. The angles are converted to step pulses
 for the three stepper motors.
 
 ## Repository layout
