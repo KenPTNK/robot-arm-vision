@@ -8,10 +8,10 @@ import time
 try:
     arduino = serial.Serial(port='COM7', baudrate=115200, timeout=1)
     time.sleep(2)
-    print("[INFO] Đã kết nối Arduino qua COM7.")
+    print("[INFO] Connected to Arduino on COM7.")
 except:
     arduino = None
-    print("[WARNING] Không kết nối được Arduino.")
+    print("[WARNING] Could not connect to Arduino.")
 
 # ================================ CAMERA PARAMS ================================
 K = np.array([
@@ -76,7 +76,7 @@ model = YOLO("best.pt")
 cap = cv2.VideoCapture(1)
 
 if not cap.isOpened():
-    print("[ERROR] Không mở được camera.")
+    print("[ERROR] Could not open camera.")
     exit()
 
 # ================================ FUNCTIONS ================================
@@ -110,7 +110,7 @@ def send_position(Pr):
 auto_mode = False
 robot_busy = False
 robot_start_time = 0
-ROBOT_TIMEOUT = 20  # giây
+ROBOT_TIMEOUT = 20  # seconds
 pending_target = None
 ready_to_send = False
 
@@ -128,7 +128,7 @@ while True:
     results = model(frame)
     annotated_frame = results[0].plot()
 
-    # ===== đọc phản hồi Arduino (NON-BLOCK) =====
+    # ===== read Arduino response (non-blocking) =====
     if arduino and arduino.in_waiting > 0:
         line = arduino.readline().decode().strip()
         if line:
@@ -188,7 +188,7 @@ while True:
                     stable_count = 0
                     last_Pr = None
 
-        # ===== HIỂN THỊ =====
+        # ===== DISPLAY =====
         if pending_target is not None:
             Pr, cx, cy = pending_target
 

@@ -40,7 +40,7 @@ model = YOLO("best.pt")
 # ================================ CAMERA ================================
 cap = cv2.VideoCapture(1)
 if not cap.isOpened():
-    print("[ERROR] Không mở được camera.")
+    print("[ERROR] Could not open camera.")
     exit()
 
 # ================================ FUNCTIONS ================================
@@ -79,13 +79,13 @@ while True:
         x1, y1, x2, y2 = box
         cx, cy = int((x1 + x2) / 2), int((y1 + y2) / 2)
 
-        # ===== TỌA ĐỘ =====
+        # ===== COORDINATES =====
         Xw, Yw, Zw = image_to_world(cx, cy, K, dist, R, t)
         Pw = np.array([Xw, Yw, Zw])
 
         Pr = world_to_robot(Pw)
 
-        # ===== HIỂN THỊ =====
+        # ===== DISPLAY =====
         cv2.circle(annotated_frame, (cx, cy), 5, (0, 0, 255), -1)
 
         text1 = f"Pixel: ({cx},{cy})"

@@ -7,42 +7,42 @@ criteria = (cv2.TermCriteria_EPS + cv2.TermCriteria_MAX_ITER, 30, 0.001)
 
 chessboard_size = (6,6)
 square_size = 30.0
-# tạo bảng 6x6 ô vuông để hiệu chỉnh, mỗi ô vuông có kích thước 20mm (square_size)
+# 6x6 calibration board, each square has size square_size (mm)
 
 objp = np.zeros((chessboard_size[0]*chessboard_size[1],3), np.float32)
 
-# Tạo thành 1 cái bảng 63 giá trị, mỗi giá trị là bộ (x,y,z) của 1 điểm trên bảng
+# Build the board points: each row is the (x, y, z) of one point on the board
 
 objp[:, :2] = np.mgrid[0:chessboard_size[0],0:chessboard_size[1]].T.reshape(-1,2)
 
-# np.mgrid[a:b,c:d] = một bảng 2D với các giá trị x từ a đến b-1 và y từ c đến d-1
+# np.mgrid[a:b,c:d] = a 2D grid with x values from a to b-1 and y values from c to d-1
 # [[a, c], [a, c+1], ..., [a, d-1]]
 # [[a+1, c], [a+1, c+1], ..., [a+1, d-1]]
 # ...
 # [[b-1, c], [b-1, c+1], ..., [b-1, d-1]]
 
-# x_matrix là:
+# x_matrix is:
 # [[a, a, ..., a],
 # [a+1, a+1, ..., a+1]
 # ...
 # [b-1, b-1, ..., b-1]]
-# y_matrix là:
+# y_matrix is:
 # [[c, c+1, ..., d-1],
 # [c, c+1, ..., d-1],
 # ...
 # [c, c+1, ..., d-1]]
 
-# .T là transpose, coi ảnh, đổi hàng thành cột, cột thành hàng
-#  Cái giá trị của np.mgrid[0:chessboard_size[0],0:chessboard_size[1]] là (x_matrix, y_matrix) có shape (2, 6, 6) tức 2 layer matrix 6x6
-# Ta cần giá trị thuộc (x,y) nên dùng transpose để đổi shape (2,6,6) -> (6,6,2) 
-# Khi đó ta sẽ có 6 layer matrix 6x2
+# .T is the transpose: rows become columns and columns become rows
+#  np.mgrid[0:chessboard_size[0],0:chessboard_size[1]] returns (x_matrix, y_matrix) with shape (2, 6, 6), i.e. two 6x6 matrices
+# We need (x, y) pairs, so transpose the shape (2,6,6) -> (6,6,2)
+# which gives six 6x2 matrices
 
-# reshape(-1,2) sẽ đổi shape (6,6,2) -> (36,2) tức 36 điểm có tọa độ (x,y)
-# vì reshape(-1,2) tức là reshape thành 2 cột, số hàng tự động tính toán dựa trên tổng số phần tử
+# reshape(-1,2) turns shape (6,6,2) into (36,2), i.e. 36 points with (x, y) coordinates
+# reshape(-1,2) means 2 columns; the row count is inferred from the total number of elements
 
 objp *= square_size
 
-# Nhân tọa độ (x,y) với kích thước ô vuông để có tọa độ thực tế của các điểm trên bảng hiệu chỉnh
+# Multiply (x, y) by the square size to get real-world coordinates of the board points
 # result:
 # [[0, 0, 0],
 # [30, 0, 0],
@@ -94,26 +94,26 @@ print("Distortion coefficients: \n", dist.ravel())
 
 with open("camera_calibration.txt", "w", encoding="utf-8") as f:
     
-    f.write("Kết quả hiệu chỉnh:\n")
-    f.write("Ma trận nội (Intrinsic matrix):\n")
+    f.write("Calibration results:\n")
+    f.write("Intrinsic matrix:\n")
     f.write(str(mtx) + "\n\n")
-    f.write("Hệ số méo (Distortion coefficients):\n")
+    f.write("Distortion coefficients:\n")
     f.write(str(dist.ravel()) + "\n\n")
     
     for i, (rvec, tvec) in enumerate(zip(rvecs, tvecs)):
         R, _ = cv2.Rodrigues(rvec)
         extrinsic = np.hstack((R, tvec))
         
-        f.write(f"Ảnh {i+1}:\n")
+        f.write(f"Image {i+1}:\n")
         f.write("R:\n" + str(R) + "\n")
         f.write("t:\n" + str(tvec) + "\n")
         f.write("[R|t]:\n" + str(extrinsic) + "\n\n")
         
-        # Ma trận ngoại của camera (camera pose so với thế giói)
+        # Camera extrinsics (camera pose relative to the world)
         R_inv = R.T
         t_inv = -R_inv @ tvec
         camera_pose = np.hstack((R_inv, t_inv))
-        f.write(f"Camera pose (ngoại của camera): \n" + str(camera_pose) + "\n")
+        f.write(f"Camera pose (inverse extrinsic): \n" + str(camera_pose) + "\n")
         
 print("Calibration results saved to camera_calibration.txt")
 

@@ -8,10 +8,10 @@ model = YOLO("old_remove_best.pt")
 cap = cv2.VideoCapture(1)
 
 if not cap.isOpened():
-    print("Không mở được camera")
+    print("Could not open camera")
     exit()
 
-print("Camera đang chạy...")
+print("Camera is running...")
 
 while True:
     ret, frame = cap.read()
