@@ -30,15 +30,15 @@ by least squares. To reach a target $`T`$, the script sends $`M^{-1}(T - \mathbf
 the shoulder and elbow form a two-link planar arm ($`L_2 = L_3 = 140`$ mm) solved with the law of cosines:
 
 ```math
-D = rac{r_w^2 + s^2 - L_2^2 - L_3^2}{2L_2L_3}
+D = \frac{r_w^2 + s^2 - L_2^2 - L_3^2}{2L_2L_3}
 ```
 
 ```math
-	heta_3 = \mathrm{atan2}\left(-\sqrt{1-D^2},\ Dight)
+\theta_3 = \mathrm{atan2}\left(-\sqrt{1-D^2},\ D\right)
 ```
 
 ```math
-	heta_2 = \mathrm{atan2}(s, r_w) - \mathrm{atan2}(L_3\sin	heta_3,\ L_2 + L_3\cos	heta_3)
+\theta_2 = \mathrm{atan2}(s, r_w) - \mathrm{atan2}(L_3\sin\theta_3,\ L_2 + L_3\cos\theta_3)
 ```
 
 where $`r_w`$ is the horizontal reach minus the 54 mm end-effector offset and $`s = P_z - L_1`$.
